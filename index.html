@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pose Challenge 3D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
+        body, html { 
+            height: 100%; margin: 0; padding: 0; overflow: hidden;
+            font-family: 'Fredoka One', cursive;
+            /* Background Gradasi Cerah & Playful */
+            background: linear-gradient(135deg, #a855f7, #ec4899); 
+            color: white; text-align: center;
+        }
+
+        #menu-screen, #game-screen {
+            height: 100%; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+        
+        #game-screen { display: none; justify-content: space-between; padding: 10px; box-sizing: border-box; }
+
+        /* JUDUL BESAR 3D */
+        h1 { 
+            font-size: 3.5rem; margin: 0; line-height: 1.1;
+            color: #fde047; /* Kuning */
+            text-shadow: 4px 4px 0 #7e22ce; /* Bayangan Ungu Tua */
+            transform: rotate(-3deg); /* Sedikit miring biar asik */
+            margin-bottom: 20px;
+        }
+
+        /* Instruksi di Menu */
+        .instruction-box {
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid white;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px;
+            max-width: 80%;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.2);
+        }
+        .instruction-text { font-size: 1.1rem; margin: 5px 0; text-shadow: 1px 1px 0 rgba(0,0,0,0.3); }
+
+        /* Bar Atas */
+        .stats-bar { 
+            display: flex; justify-content: space-between; width: 90%;
+            background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(5px);
+            padding: 10px 20px; border-radius: 20px; border: 3px solid white;
+            font-size: 1.5rem; box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        #target-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #target-letter { 
+            font-size: 120px; color: #fff; text-shadow: 6px 6px 0 #000;
+            line-height: 1; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Kamera Bingkai Tebal 3D */
+        #webcam-container { 
+            position: relative; width: 280px; height: 280px; margin: 0 auto;
+            border: 8px solid #facc15; border-radius: 25px; 
+            overflow: hidden; background: #000; box-shadow: 0 10px 0 #ca8a04;
+        }
+        canvas { width: 100% !important; height: 100% !important; object-fit: cover; }
+
+        #message { font-size: 1.3rem; color: #bef264; text-shadow: 2px 2px 0 #000; margin: 10px 0; min-height: 30px; }
+
+        /* Tombol 3D Style */
+        button { font-family: 'Fredoka One', cursive; border: none; cursor: pointer; transition: transform 0.1s; text-transform: uppercase; outline: none; -webkit-tap-highlight-color: transparent; }
+        button:active { transform: translateY(6px); box-shadow: none !important; }
+
+        .btn-start { 
+            background: #22d3ee; color: #0e7490; /* Biru Langit */
+            font-size: 1.8rem; padding: 20px 50px; border-radius: 50px; 
+            box-shadow: 0 8px 0 #0891b2; margin-top: 10px; 
+        }
+        .btn-pass { 
+            background: #f43f5e; color: white; /* Merah */
+            font-size: 1.2rem; padding: 15px 40px; border-radius: 20px; 
+            box-shadow: 0 6px 0 #9f1239; margin-bottom: 20px; width: 80%; max-width: 300px; 
+        }
+        .btn-restart { 
+            background: #facc15; color: #854d0e; /* Kuning */
+            font-size: 1.5rem; padding: 15px 40px; border-radius: 30px; 
+            box-shadow: 0 6px 0 #a16207; margin-top: 20px; 
+        }
+
+        #game-over-modal {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+        .score-box { background: white; color: #db2777; padding: 20px 40px; border-radius: 30px; font-size: 4rem; border: 8px solid #facc15; margin: 20px; box-shadow: 0 10px 0 rgba(0,0,0,0.2); }
+
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <h1>POSE<br>CHALLENGE</h1>
+        
+        <div class="instruction-box">
+            <p class="instruction-text">💡 Cahaya Harus Terang</p>
+            <p class="instruction-text">📸 Seluruh Tubuh Masuk Kamera</p>
+            <p class="instruction-text" style="font-size: 0.9rem; color: #fde047; margin-top: 10px;">(Mundur 2-3 meter)</p>
+        </div>
+
+        <button class="btn-start" onclick="selectMode()">MULAI 🚀</button>
+        <p style="font-size: 0.8rem; margin-top: 20px; opacity: 0.8;">Pastikan Volume HP Nyala 🔊</p>
+    </div>
+
+    <div id="game-screen">
+        <div class="stats-bar">
+            <div>⏱️ <span id="timer">30</span></div>
+            <div>🌟 <span id="score">0</span></div>
+        </div>
+        
+        <div id="target-area">
+            <div id="target-letter">?</div>
+        </div>
+        
+        <div id="webcam-container"></div>
+        <div id="message">Siap...</div>
+        
+        <button class="btn-pass" onclick="passLetter()">LEWATI</button>
+    </div>
+
+    <div id="game-over-modal">
+        <h2 style="color: #facc15; font-size: 2.5rem; margin: 0; text-shadow: 3px 3px 0 #ca8a04;">SELESAI!</h2>
+        <p style="margin: 0;">SKOR KAMU</p>
+        <div class="score-box" id="final-score">0</div>
+        <button class="btn-restart" onclick="location.reload()">MAIN LAGI ↺</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+
+    <script>
+        const URL = "./"; 
+        let model, webcam, ctx;
+        let score = 0, timeLeft = 30; // WAKTU JADI 30 DETIK
+        let isPlaying = false;
+        
+        const singleLetters = ["S_T", "S_Y", "S_I", "S_X", "S_L", "S_O"]; 
+        let currentLetter = "";
+
+        // --- AUDIO 3D SOUND ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'tick') {
+                // Suara Tik-Tok
+                osc.frequency.setValueAtTime(1000, t);
+                osc.type = 'triangle';
+                gain.gain.setValueAtTime(0.05, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+                osc.start(t); osc.stop(t + 0.05);
+            } 
+            else if (type === 'success') {
+                // Suara Ting!
+                osc.frequency.setValueAtTime(600, t);
+                osc.frequency.exponentialRampToValueAtTime(1200, t + 0.1);
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                osc.start(t); osc.stop(t + 0.5);
+            }
+            else if (type === 'pass') {
+                osc.frequency.value = 150;
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+                osc.start(t); osc.stop(t + 0.2);
+            }
+        }
+
+        function playFanfare() {
+            const t = audioCtx.currentTime;
+            const notes = [523.25, 659.25, 783.99, 1046.50, 523.25, 1046.50]; 
+            notes.forEach((note, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = note;
+                osc.type = 'square';
+                const startTime = t + (i * 0.12);
+                gain.gain.setValueAtTime(0.1, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
+                osc.start(startTime); osc.stop(startTime + 0.12);
+            });
+        }
+
+        async function selectMode() {
+            if(audioCtx.state === 'suspended') { audioCtx.resume(); }
+            document.getElementById("menu-screen").style.display = "none";
+            document.getElementById("game-screen").style.display = "flex";
+            await init();
+        }
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            try {
+                model = await tmPose.load(modelURL, metadataURL);
+                const size = 280;
+                const flip = true; 
+                webcam = new tmPose.Webcam(size, size, flip);
+                await webcam.setup(); await webcam.play();
+                window.requestAnimationFrame(loop);
+
+                const canvas = webcam.canvas;
+                canvas.width = size; canvas.height = size;
+                document.getElementById("webcam-container").appendChild(canvas);
+                ctx = canvas.getContext("2d");
+                
+                startGame();
+            } catch (e) {
+                document.getElementById("message").innerHTML = "Error: " + e.message;
+            }
+        }
+
+        function startGame() {
+            score = 0; timeLeft = 30; // RESET WAKTU KE 30
+            isPlaying = true;
+            nextLetter();
+            
+            const countdown = setInterval(() => {
+                if(!isPlaying) { clearInterval(countdown); return; }
+                
+                timeLeft--;
+                document.getElementById("timer").innerHTML = timeLeft;
+                
+                // Bunyi tik setiap detik
+                playSound('tick');
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            playFanfare();
+            document.getElementById("final-score").innerText = score;
+            document.getElementById("game-over-modal").style.display = "flex";
+        }
+
+        function nextLetter() {
+            const randomIndex = Math.floor(Math.random() * singleLetters.length);
+            currentLetter = singleLetters[randomIndex];
+            
+            const letterEl = document.getElementById("target-letter");
+            letterEl.style.animation = 'none';
+            letterEl.offsetHeight; 
+            letterEl.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+            if(currentLetter) {
+                const displayText = currentLetter.includes("_") ? currentLetter.split("_")[1] : currentLetter;
+                letterEl.innerHTML = displayText;
+                document.getElementById("message").innerHTML = "Bentuk hurufnya!";
+                document.getElementById("message").style.color = "#bef264";
+            }
+        }
+
+        function passLetter() {
+            if (isPlaying) { playSound('pass'); nextLetter(); }
+        }
+
+        async function loop() {
+            webcam.update(); await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            if (!isPlaying) return;
+            const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+            const prediction = await model.predict(posenetOutput);
+
+            for (let i = 0; i < prediction.length; i++) {
+                if (prediction[i].className === currentLetter && prediction[i].probability > 0.85) {
+                    score += 10;
+                    document.getElementById("score").innerHTML = score;
+                    document.getElementById("message").innerHTML = "MANTAP! +10";
+                    playSound('success'); 
+                    nextLetter();
+                }
+            }
+            drawPose(pose);
+        }
+
+        function drawPose(pose) {
+            if (webcam.canvas && pose) {
+                const minPartConfidence = 0.5;
+                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+            }
+        }
+    </script>
+</body>
+</html>
